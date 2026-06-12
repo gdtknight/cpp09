@@ -6,7 +6,7 @@
 /*   By: yoshin <yoshin@student.42gyeongsan.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/26 18:00:00 by yoshin            #+#    #+#             */
-/*   Updated: 2026/03/26 18:00:00 by yoshin           ###   ########.fr       */
+/*   Updated: 2026/06/12 12:30:29 by yoshin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,148 +57,47 @@ void PmergeMe::parseArgs(int argc, char **argv)
     throw std::runtime_error("Error");
 }
 
-std::vector<int> PmergeMe::_jacobsthalSequence(int n)
+/*
+** pend 블록(짝수 인덱스 loser)을 삽입할 순서를 1-based rank 로 돌려준다.
+** rank 1(b1)은 호출 측에서 미리 chain 앞에 두므로 제외하고,
+** Jacobsthal 경계(1, 3, 5, 11, ...)마다 그룹을 내림차순으로 나열한다.
+** 예) pairs == 5  ->  [3, 2, 5, 4]
+*/
+std::vector<std::size_t> PmergeMe::_insertionOrder(std::size_t pairs)
 {
-  std::vector<int> seq;
+  std::vector<std::size_t> order;
+  std::vector<std::size_t> jacob;
+  std::size_t prev;
 
-  if (n <= 0)
-    return (seq);
-  int prev2 = 0;
-  int prev1 = 1;
-  while (prev1 < n)
+  if (pairs < 2)
+    return (order);
+  jacob.push_back(1);
+  jacob.push_back(3);
+  while (jacob.back() < pairs)
+    jacob.push_back(jacob[jacob.size() - 1] + 2 * jacob[jacob.size() - 2]);
+  prev = 1;
+  for (std::size_t i = 1; i < jacob.size(); ++i)
   {
-    seq.push_back(prev1);
-    int next = prev1 + 2 * prev2;
-    prev2 = prev1;
-    prev1 = next;
+    std::size_t hi = jacob[i] < pairs ? jacob[i] : pairs;
+    for (std::size_t r = hi; r > prev; --r)
+      order.push_back(r);
+    if (jacob[i] >= pairs)
+      break ;
+    prev = jacob[i];
   }
-  return (seq);
+  return (order);
 }
 
-void PmergeMe::_fordJohnsonSort(std::vector<int> &data)
+/* chain 안에서 블록 인덱스 unitIdx 가 놓인 현재 위치를 찾는다. */
+std::size_t PmergeMe::_indexInChain(std::vector<std::size_t> const &chain,
+  std::size_t unitIdx)
 {
-  if (data.size() <= 1)
-    return ;
-
-  std::vector<std::pair<int, int> > pairs;
-  int straggler = -1;
-  bool hasStraggler = false;
-
-  if (data.size() % 2 != 0)
+  for (std::size_t i = 0; i < chain.size(); ++i)
   {
-    straggler = data.back();
-    hasStraggler = true;
+    if (chain[i] == unitIdx)
+      return (i);
   }
-  for (std::vector<int>::size_type i = 0; i + 1 < data.size(); i += 2)
-  {
-    if (data[i] > data[i + 1])
-      pairs.push_back(std::make_pair(data[i], data[i + 1]));
-    else
-      pairs.push_back(std::make_pair(data[i + 1], data[i]));
-  }
-
-  std::vector<int> mainChain;
-  std::vector<int> pend;
-  for (std::vector<std::pair<int, int> >::size_type i = 0;
-       i < pairs.size(); i++)
-  {
-    mainChain.push_back(pairs[i].first);
-    pend.push_back(pairs[i].second);
-  }
-
-  _fordJohnsonSort(mainChain);
-
-  std::vector<int> sorted(mainChain);
-  std::vector<int> pendReordered;
-
-  std::vector<int> jacobsthal = _jacobsthalSequence(
-    static_cast<int>(pend.size()));
-
-  std::vector<bool> inserted(pend.size(), false);
-  for (std::vector<int>::size_type ji = 0; ji < jacobsthal.size(); ji++)
-  {
-    int idx = jacobsthal[ji];
-    for (int k = idx; k >= 1; k--)
-    {
-      int pendIdx = k - 1;
-      if (pendIdx < static_cast<int>(pend.size()) && !inserted[pendIdx])
-      {
-        _binaryInsert(sorted, pend[pendIdx], sorted.end());
-        inserted[pendIdx] = true;
-      }
-    }
-  }
-  for (std::vector<bool>::size_type i = 0; i < inserted.size(); i++)
-  {
-    if (!inserted[i])
-      _binaryInsert(sorted, pend[i], sorted.end());
-  }
-  if (hasStraggler)
-    _binaryInsert(sorted, straggler, sorted.end());
-
-  data = sorted;
-}
-
-void PmergeMe::_fordJohnsonSort(std::deque<int> &data)
-{
-  if (data.size() <= 1)
-    return ;
-
-  std::deque<std::pair<int, int> > pairs;
-  int straggler = -1;
-  bool hasStraggler = false;
-
-  if (data.size() % 2 != 0)
-  {
-    straggler = data.back();
-    hasStraggler = true;
-  }
-  for (std::deque<int>::size_type i = 0; i + 1 < data.size(); i += 2)
-  {
-    if (data[i] > data[i + 1])
-      pairs.push_back(std::make_pair(data[i], data[i + 1]));
-    else
-      pairs.push_back(std::make_pair(data[i + 1], data[i]));
-  }
-
-  std::deque<int> mainChain;
-  std::deque<int> pend;
-  for (std::deque<std::pair<int, int> >::size_type i = 0;
-       i < pairs.size(); i++)
-  {
-    mainChain.push_back(pairs[i].first);
-    pend.push_back(pairs[i].second);
-  }
-
-  _fordJohnsonSort(mainChain);
-
-  std::deque<int> sorted(mainChain.begin(), mainChain.end());
-  std::vector<int> jacobsthal = _jacobsthalSequence(
-    static_cast<int>(pend.size()));
-
-  std::vector<bool> inserted(pend.size(), false);
-  for (std::vector<int>::size_type ji = 0; ji < jacobsthal.size(); ji++)
-  {
-    int idx = jacobsthal[ji];
-    for (int k = idx; k >= 1; k--)
-    {
-      int pendIdx = k - 1;
-      if (pendIdx < static_cast<int>(pend.size()) && !inserted[pendIdx])
-      {
-        _binaryInsert(sorted, pend[pendIdx], sorted.end());
-        inserted[pendIdx] = true;
-      }
-    }
-  }
-  for (std::vector<bool>::size_type i = 0; i < inserted.size(); i++)
-  {
-    if (!inserted[i])
-      _binaryInsert(sorted, pend[i], sorted.end());
-  }
-  if (hasStraggler)
-    _binaryInsert(sorted, straggler, sorted.end());
-
-  data.assign(sorted.begin(), sorted.end());
+  return (chain.size());
 }
 
 void PmergeMe::sortAndDisplay(void)
