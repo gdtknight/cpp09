@@ -6,7 +6,7 @@
 /*   By: yoshin <yoshin@student.42gyeongsan.kr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/26 18:00:00 by yoshin            #+#    #+#             */
-/*   Updated: 2026/06/12 12:30:29 by yoshin           ###   ########.fr       */
+/*   Updated: 2026/06/18 10:00:00 by yoshin           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,40 +61,40 @@ void PmergeMe::parseArgs(int argc, char **argv)
 ** pend 블록(짝수 인덱스 loser)을 삽입할 순서를 1-based rank 로 돌려준다.
 ** rank 1(b1)은 호출 측에서 미리 chain 앞에 두므로 제외하고,
 ** Jacobsthal 경계(1, 3, 5, 11, ...)마다 그룹을 내림차순으로 나열한다.
-** 예) pairs == 5  ->  [3, 2, 5, 4]
+** 예) pairCount == 5  ->  [3, 2, 5, 4]
 */
-std::vector<std::size_t> PmergeMe::_insertionOrder(std::size_t pairs)
+std::vector<std::size_t> PmergeMe::_insertionOrder(std::size_t pairCount)
 {
-  std::vector<std::size_t> order;
+  std::vector<std::size_t> insertOrder;
   std::vector<std::size_t> jacob;
-  std::size_t prev;
+  std::size_t prevHi;
 
-  if (pairs < 2)
-    return (order);
+  if (pairCount < 2)
+    return (insertOrder);
   jacob.push_back(1);
   jacob.push_back(3);
-  while (jacob.back() < pairs)
+  while (jacob.back() < pairCount)
     jacob.push_back(jacob[jacob.size() - 1] + 2 * jacob[jacob.size() - 2]);
-  prev = 1;
+  prevHi = 1;
   for (std::size_t i = 1; i < jacob.size(); ++i)
   {
-    std::size_t hi = jacob[i] < pairs ? jacob[i] : pairs;
-    for (std::size_t r = hi; r > prev; --r)
-      order.push_back(r);
-    if (jacob[i] >= pairs)
+    std::size_t groupHi = jacob[i] < pairCount ? jacob[i] : pairCount;
+    for (std::size_t rank = groupHi; rank > prevHi; --rank)
+      insertOrder.push_back(rank);
+    if (jacob[i] >= pairCount)
       break ;
-    prev = jacob[i];
+    prevHi = jacob[i];
   }
-  return (order);
+  return (insertOrder);
 }
 
-/* chain 안에서 블록 인덱스 unitIdx 가 놓인 현재 위치를 찾는다. */
+/* chain 안에서 블록 번호 blockIdx 가 놓인 현재 위치를 찾는다. */
 std::size_t PmergeMe::_indexInChain(std::vector<std::size_t> const &chain,
-  std::size_t unitIdx)
+  std::size_t blockIdx)
 {
   for (std::size_t i = 0; i < chain.size(); ++i)
   {
-    if (chain[i] == unitIdx)
+    if (chain[i] == blockIdx)
       return (i);
   }
   return (chain.size());
